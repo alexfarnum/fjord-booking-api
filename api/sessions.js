@@ -33,6 +33,7 @@ export default async function handler(req, res) {
     const filtered = allSessions.filter(session => {
       const isAllowedType = ALLOWED_SESSION_TYPES.includes(session.session_type_name);
       const isFutureSession = new Date(session.start_time) >= now;
+
       return isAllowedType && isFutureSession;
     });
 
@@ -47,7 +48,14 @@ export default async function handler(req, res) {
         price: s.price,
         currency: s.currency,
         room: s.room?.name || null,
-        soldOut: Number(s.remaining_capacity) <= 0
+        soldOut: Number(s.remaining_capacity) <= 0,
+
+        // Trybe booking link fallback
+        bookingUrl:
+          s.booking_url ||
+          s.public_url ||
+          s.checkout_url ||
+          `https://fjord.try.be/sessions/${s.id}`
       }))
       .sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
 
