@@ -1,46 +1,44 @@
 export default async function handler(req, res) {
   try {
+    const SITE_ID = "a13c06a5-d5cf-40dd-94a5-db36c20961f2";
+
     let allSessions = [];
     let page = 1;
-    let hasNext = true;
+    let lastPage = 1;
 
-    while (hasNext) {
-      const response = await fetch(`https://api.try.be/shop/sessions?page=${page}`, {
-        headers: {
-          Authorization: `Bearer ${process.env.TRYBE_API_KEY}`,
-          Accept: "application/json"
+    do {
+      const response = await fetch(
+        `https://api.try.be/shop/sessions?site_id=${SITE_ID}&page=${page}`,
+        {
+          headers: {
+            Authorization: `Bearer ${process.env.TRYBE_API_KEY}`,
+            Accept: "application/json"
+          }
         }
-      });
+      );
 
       const json = await response.json();
 
       allSessions = allSessions.concat(json.data || []);
-      hasNext = json.links && json.links.next;
+      lastPage = json.meta?.last_page || 1;
       page++;
-    }
+
+    } while (page <= lastPage);
 
     const publicSessions = allSessions.filter(session => {
-      const visibility = (
-        session.visibility ||
-        session.status ||
-        session.access ||
-        session.booking_visibility ||
-        session.availability_visibility ||
-        ""
-      ).toLowerCase();
+      const name = (session.session_type_name || "").toLowerCase();
 
-      const isPrivate =
-        visibility.includes("private") ||
-        visibility.includes("by_link") ||
-        visibility.includes("by link") ||
-        visibility.includes("link_only") ||
-        visibility.includes("link only") ||
-        session.private === true ||
-        session.is_private === true ||
+      const isPrivateSessionType = name.includes("private");
+
+      const isByLinkOnly =
         session.by_link_only === true ||
-        session.is_by_link_only === true;
+        session.is_by_link_only === true ||
+        session.link_only === true ||
+        session.is_link_only === true ||
+        session.visibility === "by_link_only" ||
+        session.visibility === "private";
 
-      return !isPrivate;
+      return !isPrivateSessionType && !isByLinkOnly;
     });
 
     const sessions = publicSessions.map(session => ({
