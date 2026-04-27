@@ -9,20 +9,16 @@ export default async function handler(req, res) {
 
     const json = await response.json();
 
-    const sessions = (json.data || []).map(session => ({
-      id: session.id,
-      type: session.session_type_name,
-      startTime: session.start_time,
-      endTime: session.end_time,
-      remainingSpots: session.remaining_capacity,
-      price: session.price,
-      soldOut: session.remaining_capacity <= 0
-    }));
+    res.status(200).json({
+      status: response.status,
+      ok: response.ok,
+      raw: json
+    });
 
-    res.status(200).json({ sessions });
   } catch (error) {
     res.status(500).json({
-      error: 'Failed to fetch Trybe sessions'
+      error: 'Failed to fetch Trybe sessions',
+      message: error.message
     });
   }
 }
