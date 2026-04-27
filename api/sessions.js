@@ -8,7 +8,7 @@ export default async function handler(req, res) {
       const response = await fetch(`https://api.try.be/shop/sessions?page=${page}`, {
         headers: {
           Authorization: `Bearer ${process.env.TRYBE_API_KEY}`,
-          Accept: 'application/json'
+          Accept: "application/json"
         }
       });
 
@@ -19,7 +19,31 @@ export default async function handler(req, res) {
       page++;
     }
 
-    const sessions = allSessions.map(session => ({
+    const publicSessions = allSessions.filter(session => {
+      const visibility = (
+        session.visibility ||
+        session.status ||
+        session.access ||
+        session.booking_visibility ||
+        session.availability_visibility ||
+        ""
+      ).toLowerCase();
+
+      const isPrivate =
+        visibility.includes("private") ||
+        visibility.includes("by_link") ||
+        visibility.includes("by link") ||
+        visibility.includes("link_only") ||
+        visibility.includes("link only") ||
+        session.private === true ||
+        session.is_private === true ||
+        session.by_link_only === true ||
+        session.is_by_link_only === true;
+
+      return !isPrivate;
+    });
+
+    const sessions = publicSessions.map(session => ({
       id: session.id,
       type: session.session_type_name,
       startTime: session.start_time,
@@ -28,7 +52,7 @@ export default async function handler(req, res) {
       capacity: session.capacity,
       price: session.price,
       currency: session.currency,
-      room: session.room?.name || '',
+      room: session.room?.name || "",
       soldOut: Number(session.remaining_capacity) <= 0
     }));
 
@@ -36,7 +60,7 @@ export default async function handler(req, res) {
 
   } catch (error) {
     res.status(500).json({
-      error: 'Failed to fetch Trybe sessions',
+      error: "Failed to fetch Trybe sessions",
       message: error.message
     });
   }
