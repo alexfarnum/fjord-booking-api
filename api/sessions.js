@@ -1,15 +1,26 @@
 export default async function handler(req, res) {
   try {
-    const response = await fetch('https://api.try.be/shop/sessions', {
-      headers: {
-        Authorization: `Bearer ${process.env.TRYBE_API_KEY}`,
-        Accept: 'application/json'
-      }
-    });
+    let allSessions = [];
+    let page = 1;
+    let hasNext = true;
 
-    const json = await response.json();
+    while (hasNext) {
+      const response = await fetch(`https://api.try.be/shop/sessions?page=${page}`, {
+        headers: {
+          Authorization: `Bearer ${process.env.TRYBE_API_KEY}`,
+          Accept: 'application/json'
+        }
+      });
 
-    const sessions = (json.data || []).map(session => ({
+      const json = await response.json();
+
+      allSessions = allSessions.concat(json.data || []);
+
+      hasNext = json.links && json.links.next;
+      page++;
+    }
+
+    const sessions = allSessions.map(session => ({
       id: session.id,
       type: session.session_type_name,
       startTime: session.start_time,
@@ -23,6 +34,7 @@ export default async function handler(req, res) {
     }));
 
     res.status(200).json({ sessions });
+
   } catch (error) {
     res.status(500).json({
       error: 'Failed to fetch Trybe sessions',
