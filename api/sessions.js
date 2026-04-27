@@ -1,4 +1,12 @@
 export default async function handler(req, res) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
   try {
     const ALLOWED_SESSION_TYPES = ["Shared Session", "Private Session"];
     const now = new Date();
@@ -25,7 +33,6 @@ export default async function handler(req, res) {
     const filtered = allSessions.filter(session => {
       const isAllowedType = ALLOWED_SESSION_TYPES.includes(session.session_type_name);
       const isFutureSession = new Date(session.start_time) >= now;
-
       return isAllowedType && isFutureSession;
     });
 
@@ -44,10 +51,10 @@ export default async function handler(req, res) {
       }))
       .sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
 
-    res.status(200).json({ sessions });
+    return res.status(200).json({ sessions });
 
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       error: "Failed to fetch Trybe sessions",
       message: error.message
     });
