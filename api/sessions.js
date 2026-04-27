@@ -9,10 +9,32 @@ export default async function handler(req, res) {
 
     const json = await response.json();
 
-    res.status(200).json({
-      sample: json.data?.[0] || null,
-      keys: json.data?.[0] ? Object.keys(json.data[0]) : []
-    });
+    // ✅ Only allow these session types
+    const ALLOWED_SESSION_TYPES = [
+      "Shared Session",
+      "Private Session"
+    ];
+
+    // ✅ Filter sessions BEFORE mapping
+    const filtered = (json.data || []).filter(session =>
+      ALLOWED_SESSION_TYPES.includes(session.session_type_name)
+    );
+
+    // ✅ Format for frontend (Squarespace)
+    const sessions = filtered.map(s => ({
+      id: s.id,
+      type: s.session_type_name,
+      startTime: s.start_time,
+      endTime: s.end_time,
+      remainingSpots: s.remaining_capacity,
+      capacity: s.capacity,
+      price: s.price,
+      currency: s.currency,
+      room: s.room?.name || null,
+      soldOut: s.remaining_capacity <= 0
+    }));
+
+    res.status(200).json({ sessions });
 
   } catch (error) {
     res.status(500).json({
