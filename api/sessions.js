@@ -1,6 +1,7 @@
 export default async function handler(req, res) {
   try {
     const ALLOWED_SESSION_TYPES = ["Shared Session", "Private Session"];
+    const now = new Date();
 
     let allSessions = [];
     let page = 1;
@@ -21,24 +22,30 @@ export default async function handler(req, res) {
       page++;
     } while (page <= lastPage);
 
-    const filtered = allSessions.filter(session =>
-      ALLOWED_SESSION_TYPES.includes(session.session_type_name)
-    );
+    const filtered = allSessions.filter(session => {
+      const isAllowedType = ALLOWED_SESSION_TYPES.includes(session.session_type_name);
+      const isFutureSession = new Date(session.start_time) >= now;
 
-    const sessions = filtered.map(s => ({
-      id: s.id,
-      type: s.session_type_name,
-      startTime: s.start_time,
-      endTime: s.end_time,
-      remainingSpots: s.remaining_capacity,
-      capacity: s.capacity,
-      price: s.price,
-      currency: s.currency,
-      room: s.room?.name || null,
-      soldOut: Number(s.remaining_capacity) <= 0
-    }));
+      return isAllowedType && isFutureSession;
+    });
+
+    const sessions = filtered
+      .map(s => ({
+        id: s.id,
+        type: s.session_type_name,
+        startTime: s.start_time,
+        endTime: s.end_time,
+        remainingSpots: s.remaining_capacity,
+        capacity: s.capacity,
+        price: s.price,
+        currency: s.currency,
+        room: s.room?.name || null,
+        soldOut: Number(s.remaining_capacity) <= 0
+      }))
+      .sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
 
     res.status(200).json({ sessions });
+
   } catch (error) {
     res.status(500).json({
       error: "Failed to fetch Trybe sessions",
