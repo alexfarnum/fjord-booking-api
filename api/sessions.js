@@ -15,7 +15,6 @@ export default async function handler(req, res) {
       const json = await response.json();
 
       allSessions = allSessions.concat(json.data || []);
-
       hasNext = json.links && json.links.next;
       page++;
     }
