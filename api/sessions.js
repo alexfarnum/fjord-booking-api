@@ -1,4 +1,5 @@
 export default async function handler(req, res) {
+  // CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
@@ -8,20 +9,23 @@ export default async function handler(req, res) {
   }
 
   try {
-    const ALLOWED_SESSION_TYPES = ["Shared Session", "Private Session"];
     const now = new Date();
 
     let allSessions = [];
     let page = 1;
     let lastPage = 1;
 
+    // 🔁 Pull all pages from Trybe
     do {
-      const response = await fetch(`https://api.try.be/shop/sessions?page=${page}`, {
-        headers: {
-          Authorization: `Bearer ${process.env.TRYBE_API_KEY}`,
-          Accept: "application/json"
+      const response = await fetch(
+        `https://api.try.be/shop/sessions?page=${page}`,
+        {
+          headers: {
+            Authorization: `Bearer ${process.env.TRYBE_API_KEY}`,
+            Accept: "application/json"
+          }
         }
-      });
+      );
 
       const json = await response.json();
 
@@ -30,13 +34,21 @@ export default async function handler(req, res) {
       page++;
     } while (page <= lastPage);
 
+    // 🔍 Filter sessions
     const filtered = allSessions.filter(session => {
-      const isAllowedType = ALLOWED_SESSION_TYPES.includes(session.session_type_name);
-      const isFutureSession = new Date(session.start_time) >= now;
+      const name = (session.session_type_name || "").toLowerCase();
 
-      return isAllowedType && isFutureSession;
+      const isCorrectType =
+        name.includes("private") ||
+        name.includes("shared");
+
+      const isFutureSession =
+        new Date(session.start_time) >= now;
+
+      return isCorrectType && isFutureSession;
     });
 
+    // 🔧 Format output
     const sessions = filtered
       .map(s => ({
         id: s.id,
@@ -50,12 +62,8 @@ export default async function handler(req, res) {
         room: s.room?.name || null,
         soldOut: Number(s.remaining_capacity) <= 0,
 
-        // Trybe booking link fallback
-        bookingUrl:
-          s.booking_url ||
-          s.public_url ||
-          s.checkout_url ||
-          `https://fjord.try.be/sessions/${s.id}`
+        // 🔥 Direct booking link to session
+        bookingUrl: `https://fjord.try.be/sessions/${s.id}`
       }))
       .sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
 
